@@ -10,7 +10,7 @@ import xdi2.core.xri3.CloudNumber;
 public class ExampleChangeCloudXdiEndpoint {
 
 	/* CHOOSE THE INDIVIDUAL's CLOUD NAME HERE */
-	private static CloudName cloudName = CloudName.create("=dev.test.66");
+	private static CloudName cloudName = CloudName.create("=test.barry1");
 
 	/* CHOOSE THE INDIVIDUAL's XDI ENDPOINT HERE */
 	private static String cloudXdiEndpoint = "http://xdi.mycsp.com/mynewendpoint";
