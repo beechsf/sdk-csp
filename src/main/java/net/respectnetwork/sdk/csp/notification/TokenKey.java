@@ -2,7 +2,7 @@ package net.respectnetwork.sdk.csp.notification;
 
 import java.io.Serializable;
 
-import net.respectnetwork.sdk.csp.model.CSPUser;
+import net.respectnetwork.sdk.csp.model.UserProfile;
 
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;

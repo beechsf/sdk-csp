@@ -3,7 +3,7 @@ package net.respectnetwork.sdk.csp.model;
 import org.apache.commons.lang.builder.EqualsBuilder;
 import org.apache.commons.lang.builder.HashCodeBuilder;
 
-public class CSPUser {
+public class UserProfile {
       
     /** Name */
     private String name;    
@@ -183,8 +183,8 @@ public class CSPUser {
      */
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof CSPUser){
-            final CSPUser other = (CSPUser) obj;
+        if(obj instanceof UserProfile){
+            final UserProfile other = (UserProfile) obj;
             return new EqualsBuilder()
                 .append(name, other.name)
                 .append(nickName, other.nickName)

@@ -58,6 +58,13 @@ public class BasicTokenManager implements TokenManager {
     public boolean validateToken(TokenKey tokenKey, String token)
         throws TokenException {
         
+        for (Object key: tokenCache.getKeys()) {
+            System.out.println("KEY = " + key.toString());
+            Element element = tokenCache.get(key);
+            if(element != null ){
+                logger.debug("Value = " + element.getObjectValue().toString());
+            }
+        }
 
         boolean foundMatch = false;
         Element element = tokenCache.get(tokenKey);

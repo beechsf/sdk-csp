@@ -2,8 +2,11 @@ package net.respectnetwork.sdk.csp;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,7 +15,7 @@ import java.util.Map.Entry;
 import net.respectnetwork.sdk.csp.exception.CSPRegistrationException;
 import net.respectnetwork.sdk.csp.exception.CSPValidationException;
 import net.respectnetwork.sdk.csp.exception.MessageCreationException;
-import net.respectnetwork.sdk.csp.model.CSPUser;
+import net.respectnetwork.sdk.csp.model.UserProfile;
 import net.respectnetwork.sdk.csp.model.CSPUserCredential;
 import net.respectnetwork.sdk.csp.notification.MessageManager;
 import net.respectnetwork.sdk.csp.notification.NotificationException;
@@ -82,6 +85,7 @@ public class BasicCSP implements CSP {
     
     /** Registration Codes Validation Endpoint */
     private String validationEndpoint;
+    
     
     /**
      *  Default Constructor
@@ -790,11 +794,11 @@ public class BasicCSP implements CSP {
      * {@inheritDoc}
      */
     @Override
-    public void createAndValidateUser(CloudNumber cloudNumber, CSPUser theUser, String secretToken)
+    public void setUpAndValidateUserProfileInCloud(CloudNumber cloudNumber, UserProfile theUser, String secretToken)
             throws CSPValidationException {
             
         try {
-            
+            //@TODO  Use javax.validation / JSR-303
             if (validationEndpoint == null || tokenManager == null || theNotifier == null ) {
                 throw new CSPValidationException("Basic CSP not properly configured,"
                         + " check that all required properties are set.");
@@ -809,6 +813,8 @@ public class BasicCSP implements CSP {
             theNotifier.sendEmailNotification(theUser.getEmail(), emailMessage);
             theNotifier.sendSMSNotification(theUser.getPhone(), smsMessage);
                     
+            
+            
             MessageEnvelope messageEnvelope = new MessageEnvelope();
             //Sender
             Message message = messageEnvelope.createMessage(cloudNumber.getXri());
@@ -819,20 +825,25 @@ public class BasicCSP implements CSP {
                
     
             // Create User Graph Statements
+
+            
     
             XDI3Statement[] targetStatementsSet = new XDI3Statement[8];
-            targetStatementsSet[0] = XDI3Statement.create(cloudNumber.toString() + "<+name><+full>&/&/\"" + theUser.getName() + "\"");
-            targetStatementsSet[1] = XDI3Statement.create(cloudNumber.toString() + "<+name><+nick>&/&/\"" + theUser.getNickName() + "\"");
-    
-            targetStatementsSet[2] = XDI3Statement.create(cloudNumber.toString() + "<+email>&/&/\"" + theUser.getEmail() + "\"");
-            targetStatementsSet[3] = XDI3Statement.create(cloudNumber.toString() + "<+phone>&/&/\"" + theUser.getPhone() + "\"");
-          
-            targetStatementsSet[4] = XDI3Statement.create(cloudNumber.toString() + "<+addr><+street>&/&/\"" + theUser.getStreet()  + "\"");
-            targetStatementsSet[5] = XDI3Statement.create(cloudNumber.toString() + "<+addr><+city>&/&/\"" + theUser.getCity()  + "\"");
-            targetStatementsSet[6] = XDI3Statement.create(cloudNumber.toString() + "<+addr><+state>&/&/\"" + theUser.getState()  + "\"");
-            targetStatementsSet[7] = XDI3Statement.create(cloudNumber.toString() + "<+addr><+postalcode>&/&/\"" + theUser.getPostalcode()  + "\"");
-    
+                     
+            targetStatementsSet[0] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+name><+full>&")), theUser.getName());
+            targetStatementsSet[1] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+name><+nickname>&")), theUser.getNickName());
+            
+            targetStatementsSet[2] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+email>&")), theUser.getEmail());
+            targetStatementsSet[3] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+phone>&")), theUser.getPhone());
+            
+            targetStatementsSet[4] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+addr><+street>&")), theUser.getStreet());
+            targetStatementsSet[5] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+addr><+city>&")), theUser.getCity());
+            targetStatementsSet[6] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+addr><+state>&")), theUser.getState());
+            targetStatementsSet[7] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(), XDI3Segment.create("<+addr><+postalcode>&")), theUser.getPostalcode());
+  
                     
+            //@TODO Add Terms and conditions acceptance here as well.
+            
             message.createSetOperation(Arrays.asList(targetStatementsSet)
                     .iterator());
             
@@ -863,22 +874,84 @@ public class BasicCSP implements CSP {
             throw new CSPValidationException(e.getMessage());
         }
     }
+    
+
+    
 
     /**
      * {@inheritDoc}
      */
     @Override
     public boolean validateCodes(CloudNumber cloudNumber, String emailCode,
-            String smsCode) throws CSPValidationException {
+            String smsCode, String secretToken) throws CSPValidationException {
         
         try {
             boolean result = (tokenManager.validateToken(new TokenKey(cloudNumber.toString(), "EMAIL"), emailCode) &&
                 tokenManager.validateToken(new TokenKey(cloudNumber.toString(), "SMS"), smsCode));
             
             //If the codes are used for verification once  they should then be invalidated.
-            if (result){
+            if (result) {
                 tokenManager.inValidateToken(new TokenKey(cloudNumber.toString(), "EMAIL"));
                 tokenManager.inValidateToken(new TokenKey(cloudNumber.toString(), "SMS"));
+                
+                //Add Validation Info to  the User's Graph.
+                
+                MessageEnvelope messageEnvelope = new MessageEnvelope();
+                //Sender
+                Message message = messageEnvelope.createMessage(cloudNumber.getXri());
+                //TO
+                message.setToPeerRootXri(cloudNumber.getPeerRootXri());
+                message.setLinkContractXri(XDILinkContractConstants.XRI_S_DO);
+                message.setSecretToken(secretToken);
+                
+                // Create Validation Graph Statements
+            
+                XDI3Statement[] targetStatementsSet = new XDI3Statement[6];
+                
+                //@TODO: JSR-310 Not ready until Java8
+                DateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd HH:mm:ss");
+                Date date = new Date();             
+                String dateStr = dateFormat.format(date);
+                
+                // Email Statements
+                targetStatementsSet[0] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(),
+                        XDI3Segment.create("<+email><+validation><+validationdate>&")), dateStr );
+                targetStatementsSet[1] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(),
+                        XDI3Segment.create("<+email><+validation><+validationsignature>&")), signDataWithCSPKey(getUserEmail(cloudNumber)) );
+                targetStatementsSet[2] = XDI3Statement.fromRelationComponents(
+                        XDI3Util.concatXris(cloudNumber.getPeerRootXri(), XDI3Segment.create("<+email><+validationsignature>")),
+                        XDI3Segment.create("+validator"),
+                        XDI3Segment.create(cspInformation.getCspCloudNumber().toString()));
+                
+                
+                
+                date = new Date();             
+                dateStr = dateFormat.format(date);
+                // Phone Statements
+                targetStatementsSet[3] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(),
+                        XDI3Segment.create("<+phone><+validation><+validationdate>&")), dateStr );
+                targetStatementsSet[4] = XDI3Statement.fromLiteralComponents(XDI3Util.concatXris(cloudNumber.getXri(),
+                        XDI3Segment.create("<+phone><+validation><+validationsignature>&")), signDataWithCSPKey(getUserPhone(cloudNumber)) );
+                targetStatementsSet[5] = XDI3Statement.fromRelationComponents(
+                        XDI3Util.concatXris(cloudNumber.getPeerRootXri(), XDI3Segment.create("<+phone><+validationsignature>")),
+                        XDI3Segment.create("+validator"),
+                        XDI3Segment.create(cspInformation.getCspCloudNumber().toString()));
+                
+                
+                
+                
+                message.createSetOperation(Arrays.asList(targetStatementsSet)
+                        .iterator());
+                
+                // send message
+        
+                String cloudXdiEndpoint = makeCloudXdiEndpoint(
+                        this.getCspInformation(), cloudNumber);
+        
+                XDIClient xdiClientCloud = new XDIHttpClient(cloudXdiEndpoint);
+        
+                xdiClientCloud.send(message.getMessageEnvelope(), null);
+                
             }
            
             return result;
@@ -887,8 +960,52 @@ public class BasicCSP implements CSP {
             String error = "Error validating token: {}" + e.getMessage();
             log.debug(error);
             throw new CSPValidationException(error);
+        } catch (Xdi2ClientException e) {
+            String error = "Error Setting Validation Data in User's Graph" + e.getMessage();
+            log.debug(error);
+            throw new CSPValidationException(error);
         }
     }
+    
+    
+    /**
+     * Utility  Method for signing data.
+     *  
+     * @return Signature of data
+     * @param data
+     */
+    private String signDataWithCSPKey(String data) {
+        //Get  CSP Private Key
+        // Sign  data with CSP Key.
+        return "1s1SPrCBkedbNf0Tp0GbMJDyR4e9T04ZZwIDAQABAoGAFijko56";
+               
+    }
+    
+    /**
+     * Get User's Email from  User Graph
+     * 
+     * @param cloudNumber
+     * @return
+     */
+    private String getUserEmail(CloudNumber cloudNumber) {
+        
+        return "aaa@email.com";
+        
+    }
+    
+    /**
+     * Get User's Email from  User Graph
+     * 
+     * @param cloudNumber
+     * @return
+     */
+    private String getUserPhone(CloudNumber cloudNumber) {
+        
+        return "+1 650 444 3465";
+        
+    }
+    
+    
     
 
 }
