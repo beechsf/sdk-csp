@@ -59,10 +59,12 @@ public class BasicTokenManager implements TokenManager {
         throws TokenException {
         
         for (Object key: tokenCache.getKeys()) {
-            System.out.println("KEY = " + key.toString());
+            logger.debug("KEY = " + key.toString());
             Element element = tokenCache.get(key);
             if(element != null ){
                 logger.debug("Value = " + element.getObjectValue().toString());
+            } else {
+                logger.debug("No value found for  key: {}", key.toString() );
             }
         }
 
