@@ -152,7 +152,12 @@ public interface CSP {
      * 2) Register the ClouldName via EPP
      * 3) Update the RN  Member Graph
      * 4).Update CSP  Graph and Cloud Graph with Cloud Name
+     * 
      * Consolidates 5.1.1
+     * 
+     * Used in:
+     *   [A] 5.1.1
+     *   [B] Not used
      * 
      * @param cloudNumber CloudNumber Previously created and provisioned in CSP and Cloud graphs.
      * @param cloudName User provided Cloud Name
@@ -170,6 +175,10 @@ public interface CSP {
     * Seed the CSP graph with a temporary Secret Token
     * Consolidation of 2.1.1.2 and 2.1.1.4
     * 
+    * Used in:
+    *   [A] 2.1.1
+    *   [B] Not used
+    * 
     * @return CSPUserCredential containing cloud number and temporary secret token
     * @throws CSPRegistrationException
     */
@@ -178,12 +187,15 @@ public interface CSP {
     
        
     /**
-     * Create User Graph and Validate User Information. (3.1.1)
+     * Create User Graph and Validate User Information
      * 
      * 1) Send out Verification Contacts: SMS + eMail
      * 2) Update the data in the CSP's User Graph. Mark as UnValidated.
      * 3) Check if Data qualifies for free account. ( i.e. neither email nor email are in MG Service ) 
      *  
+     * Used in:
+     *  [A] 3.1.1
+     *  [B] Not used
      *
      * @param cloudNumber 
      * @param theUser User Personal Data 
@@ -200,12 +212,17 @@ public interface CSP {
      * <+validation>/+validator/[@]!:uuid:9999
      * <+validation><+validationdate>&/&/ = "10:10:2013"
      * <+validation><+validationsignature>&/&/ = "sig(emailaddress)"  ( Signed by CSP/Validator ) 
+     * 
+     * Used in:
+     *  [A] 4.1.1
+     *  [B] Not used
      *      
      * @param cloudNumber Cloud Number created for new user. Key for Lookup.
      * @param emailCode validationCode e-mailed to User
      * @param smsCode validation code SMSed to  user
      * @param secretToken required to  update user's Graph
      * @throws CSPValidationException
+     * @return whether or not Validation suceeded
      * 
      */
     public boolean validateCodes(CloudNumber cloudNumber, String emailCode, String smsCode, String secretToken)
@@ -213,6 +230,10 @@ public interface CSP {
     
     /** 
      * Get  CSP Information
+     * 
+     *  Used in:
+     *   [A] Utility Method
+     *   [B] Utility Method
      */    
     public CSPInformation getCspInformation();
 }
